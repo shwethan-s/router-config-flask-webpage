@@ -154,6 +154,8 @@ def remove_building(num):
     if num <= 0:
         flash('Invalid building number.')
         return
+    
+    
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor() # get a cursor object
     # Update the status to 'removed' and set last_updated timestamp
@@ -183,7 +185,8 @@ def generate_tsirouters_ini():
     for b in get_buildings():
      
     
-        lines.append(f"{b[1]}={b[2]},FALSE")
+        lines.append(f"{b[1]}={b[2]},FALSE") 
+       # clear the list after each iteration
 
     os.makedirs(EXPORT_FOLDER, exist_ok=True)
     path = os.path.join(EXPORT_FOLDER, INI_FILE)
