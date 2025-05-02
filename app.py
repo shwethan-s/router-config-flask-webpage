@@ -284,6 +284,8 @@ def export():
     """
     mode = request.args.get('type', 'master')
 
+
+
     if mode == 'master':
         path = generate_tsirouters_ini()
         return send_file(path, as_attachment=True)
