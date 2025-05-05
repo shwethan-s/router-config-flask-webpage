@@ -245,12 +245,28 @@ def generate_all_inis():
 # -------------------- Flask Routes --------------------
 @app.route('/')
 def index():
-    """Dashboard: list, flash messages, last-updated."""
+    # 1) Fetch the raw ISO string (or None)
+    raw_ts = get_last_update()
+
+    # 2) Try to parse & format; fall back gracefully
+    if raw_ts:
+        try:
+            dt = datetime.datetime.fromisoformat(raw_ts)
+            # e.g. “May 05, 2025 10:15:33”
+            last_update = dt.strftime("%b %d, %Y %H:%M:%S")
+        except Exception:
+            # if parsing fails, just show the raw value
+            last_update = raw_ts
+    else:
+        # no timestamp yet
+        last_update = '—'
+
+    # 3) Render template with the formatted timestamp
     return render_template(
         'index.html',
-        buildings=get_buildings(),
-        last_update=get_last_update(),
-        messages=get_flashed_messages()
+        buildings    = get_buildings(),
+        last_update  = last_update,
+        messages     = get_flashed_messages()
     )
 
 @app.route('/add', methods=['POST'])
@@ -315,5 +331,10 @@ def export():
 
 # -------------------- Launch App --------------------
 if __name__ == '__main__':
+    import webbrowser, threading
+
     init_db()
-    app.run(debug=True, host='0.0.0.0')
+
+    # Start Flask in a thread
+    threading.Timer(1, lambda: webbrowser.open("http://127.0.0.1:5000")).start()
+    app.run(host='127.0.0.1', port=5000)

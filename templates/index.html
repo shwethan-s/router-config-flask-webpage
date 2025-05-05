@@ -1,66 +1,66 @@
 <!DOCTYPE html>
-<html lang="en" class="h-full w-full">
+<html lang="en" class="h-screen w-screen">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Building Config Dashboard</title>
-  <link
-    href="https://cdn.jsdelivr.net/npm/tailwindcss@3.4.0/dist/tailwind.min.css"
-    rel="stylesheet"
-  />
+
+  <!-- 1) Pull in Tailwind via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
 </head>
 
-<body class="flex flex-col h-full w-full bg-gray-100">
+<body class="flex flex-col h-screen w-screen bg-gray-100">
 
   <!-- HEADER -->
-  <header class="bg-blue-600 text-white py-4 shadow w-full">
-    <div class="w-full px-4">
-      <h1 class="text-2xl font-bold">Building Config Dashboard</h1>
+  <header class="bg-blue-600 text-white py-4 w-full shadow">
+    <div class="w-full px-6">
+      <h1 class="text-3xl font-bold">Network Controller Config Dashboard</h1>
     </div>
   </header>
 
-  <!-- MAIN SECTION -->
-  <main class="flex-1 w-full px-4 py-6">
+  <!-- MAIN CONTENT -->
+  <main class="flex-1 w-full px-6 py-8 overflow-auto space-y-8">
 
     <!-- FLASH MESSAGES -->
     {% if messages %}
-    <div class="mb-6 w-full">
-      {% for msg in messages %}
-      <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-2">
-        {{ msg }}
+      <div class="space-y-2">
+        {% for msg in messages %}
+          <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-2 rounded">
+            {{ msg }}
+          </div>
+        {% endfor %}
       </div>
-      {% endfor %}
-    </div>
     {% endif %}
 
-    <!-- LAST UPDATED TIMESTAMP -->
-    <div class="mb-6 text-gray-700 w-full">
-      <strong>Last updated:</strong>
-      {{ last_update or '—' }}
+    <!-- LAST UPDATED -->
+    <div class="text-gray-700">
+      <strong>Last updated:</strong> {{ last_update or '—' }}
     </div>
 
-    <!-- ADD CONTROLLER FORM -->
-    <section class="bg-white rounded-lg shadow p-6 mb-6 w-full">
-      <h2 class="text-xl font-semibold mb-4">Add Controller</h2>
-      <form method="POST" action="/add" class="grid grid-cols-1 md:grid-cols-3 gap-4 w-full">
+    <!-- ADD CONTROLLER -->
+    <section class="bg-white rounded-lg shadow p-6 w-full">
+      <h2 class="text-xl font-medium mb-4">Add Controller</h2>
+      <form method="POST" action="/add" class="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full">
         <input type="number" name="building_number" required
-               placeholder="Building #"
-               class="border border-gray-300 rounded p-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-600"/>
+               placeholder="Network #"
+               class="border border-gray-300 rounded px-3 py-2 w-full focus:ring-2 focus:ring-blue-500"/>
+
         <input type="text" name="ip" required
                placeholder="IP Address"
-               class="border border-gray-300 rounded p-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-500"/>
+               class="border border-gray-300 rounded px-3 py-2 w-full focus:ring-2 focus:ring-blue-500"/>
+
         <button type="submit"
-                class="bg-green-500 text-white rounded p-2 w-full hover:bg-green-600 transition-colors">
+                class="bg-green-500 text-white rounded px-6 py-2 w-full hover:bg-green-600 transition">
           Add
         </button>
       </form>
     </section>
 
     <!-- ACTIVE CONTROLLERS TABLE -->
-    <section class="bg-white rounded-lg shadow p-6 mb-6 w-full">
-      <h2 class="text-xl font-semibold mb-4">Active Controllers</h2>
+    <section class="bg-white rounded-lg shadow p-6 w-full">
+      <h2 class="text-xl font-medium mb-4">Active Controllers</h2>
       <div class="w-full overflow-x-auto">
-        <table class="min-w-full table-auto">
+        <table class="w-full table-auto">
           <thead class="bg-gray-200">
             <tr>
               <th class="px-4 py-2 text-left">Building #</th>
@@ -70,22 +70,22 @@
           </thead>
           <tbody>
             {% for b in buildings %}
-            <tr class="border-b hover:bg-gray-50">
-              <td class="px-4 py-2">{{ b[1] }}</td>
-              <td class="px-4 py-2">{{ b[2] }}</td>
-              <td class="px-4 py-2">
-                <a href="/remove/{{ b[1] }}"
-                   class="bg-red-500 text-white rounded px-3 py-1 hover:bg-red-600 transition-colors">
-                  Remove
-                </a>
-              </td>
-            </tr>
+              <tr class="border-b hover:bg-gray-50">
+                <td class="px-4 py-2">{{ b[1] }}</td>
+                <td class="px-4 py-2">{{ b[2] }}</td>
+                <td class="px-4 py-2">
+                  <a href="/remove/{{ b[1] }}"
+                     class="bg-red-500 text-white rounded px-3 py-1 hover:bg-red-600 transition">
+                    Remove
+                  </a>
+                </td>
+              </tr>
             {% else %}
-            <tr>
-              <td colspan="3" class="px-4 py-2 text-center text-gray-500">
-                No active controllers.
-              </td>
-            </tr>
+              <tr>
+                <td colspan="3" class="text-center py-4 text-gray-500">
+                  No active controllers.
+                </td>
+              </tr>
             {% endfor %}
           </tbody>
         </table>
@@ -93,21 +93,22 @@
     </section>
 
     <!-- EXPORT CONFIG SECTION -->
-    <section class="bg-white rounded-lg shadow p-6 mb-6 w-full">
-      <h2 class="text-xl font-semibold mb-4">Download Configs</h2>
-      <form action="/export" method="get"
-            class="flex flex-wrap gap-4 items-center justify-start w-full">
+    <section class="bg-white rounded-lg shadow p-6 w-full">
+      <h2 class="text-xl font-medium mb-4">Download Configs</h2>
+      <form action="/export" method="get" class="flex flex-wrap gap-4 items-center">
         <select name="type" required
-                class="border rounded p-2 focus:ring-2 focus:ring-blue-500">
+                class="border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-500">
           <option value="master">Master List</option>
           <option value="all">All Configs (ZIP)</option>
           <option value="single">Single Config</option>
         </select>
+
         <input type="number" name="building_number" min="1"
                placeholder="Building #"
-               class="border rounded p-2 focus:ring-2 focus:ring-blue-500"/>
+               class="border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-500"/>
+
         <button type="submit"
-                class="bg-blue-500 text-white rounded px-6 py-2 hover:bg-blue-600 transition-colors">
+                class="bg-blue-500 text-white rounded px-6 py-2 hover:bg-blue-600 transition">
           Download
         </button>
       </form>
@@ -117,7 +118,7 @@
 
   <!-- FOOTER -->
   <footer class="bg-gray-200 text-center py-4 w-full">
-    <p class="text-gray-700">&copy;  2025 Building Automation Tool</p>
+    <p class="text-gray-700">&copy; 2025 McMaster Network Automation Tool</p>
   </footer>
 
 </body>
