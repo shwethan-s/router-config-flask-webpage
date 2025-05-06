@@ -24,7 +24,7 @@ EXPORT_FOLDER = os.path.join(BASE_DIR,   'export')
 
 # **Strict filenames per spec — no ".ini" extension**
 MASTER_LIST_FN = 'Master List'
-SINGLE_FN      = 'HOSTS'
+SINGLE_FN_BASE = 'HOSTS'
 ALL_ZIP_FN     = 'all_configs.zip'
 
 # Create Flask app, pointing at the bundled templates
@@ -99,7 +99,7 @@ def get_buildings():
     """)
     rows = c.fetchall()
     conn.close()
-    return rows 
+    return rows
 
 
 def get_last_update():
@@ -120,7 +120,7 @@ def log_action(num, action):
         "INSERT INTO logs (building_number, action, timestamp) VALUES (?, ?, ?)",
         (num, action, datetime.datetime.now().isoformat())
     )
-    conn.commit() 
+    conn.commit()
     conn.close()
 
 
@@ -158,8 +158,8 @@ def add_building(num, ip):
             c.execute('''
                 UPDATE buildings
                    SET ip_address   = ?,
-                       status       = 'active',
-                       last_updated = ?
+                       last_updated = ?,
+                       status       = 'active'
                  WHERE building_number = ?
             ''', (ip, now, num))
             conn.commit()
@@ -186,7 +186,7 @@ def remove_building(num):
     conn.commit()
     conn.close()
 
-    flash(f'Removed building {num}.')
+    flash(f'Removed Network {num}')
     log_action(num, 'removed')
 
 
@@ -211,7 +211,7 @@ def generate_master_list():
 
 def generate_single_ini(building_number):
     """
-    Write HOSTS (no extension) listing every other active building
+    Write HOSTS-<number> (no extension) listing every other active building
     in the "<IP> TNR_<number>" format.
     """
     buildings = get_buildings()
@@ -225,7 +225,8 @@ def generate_single_ini(building_number):
             lines.append(f"{b[2]} TNR_{b[1]}")
 
     os.makedirs(EXPORT_FOLDER, exist_ok=True)
-    path = os.path.join(EXPORT_FOLDER, SINGLE_FN)
+    filename = f"{SINGLE_FN_BASE}-{building_number}"
+    path = os.path.join(EXPORT_FOLDER, filename)
     with open(path, 'w') as f:
         f.write("\n".join(lines))
     return path
@@ -233,22 +234,20 @@ def generate_single_ini(building_number):
 
 def generate_all_inis():
     """
-    Generate one HOSTS per building (overwriting the same file each time),
-    then bundle them all into all_configs.zip with names "<num>_HOSTS".
+    Generate one HOSTS-<number> per building and bundle them
+    all into all_configs.zip with each entry named "HOSTS-<number>".
     """
     buildings = get_buildings()
     os.makedirs(EXPORT_FOLDER, exist_ok=True)
 
-    # regenerate the HOSTS file for each building
-    for b in buildings:
-        generate_single_ini(b[1])
+    # regenerate each single file, collect paths
+    single_paths = [generate_single_ini(b[1]) for b in buildings]
 
     zip_path = os.path.join(EXPORT_FOLDER, ALL_ZIP_FN)
     with zipfile.ZipFile(zip_path, 'w') as z:
-        for b in buildings:
-            single_path = os.path.join(EXPORT_FOLDER, SINGLE_FN)
-            arcname     = f"{b[1]}_{SINGLE_FN}"
-            z.write(single_path, arcname=arcname)
+        for sp in single_paths:
+            arcname = os.path.basename(sp)
+            z.write(sp, arcname=arcname)
     return zip_path
 
 
@@ -302,7 +301,7 @@ def export():
     """
     ?type=master  → download "Master List" (no extension)
     ?type=all     → download "all_configs.zip"
-    ?type=single  → download "HOSTS" for building=X
+    ?type=single  → download "HOSTS-<number>"
     """
     mode = request.args.get('type', 'master')
 
@@ -326,7 +325,9 @@ def export():
             flash(f"Building {num} not found in master list.")
             return redirect(url_for('index'))
 
-        return send_file(path, as_attachment=True, download_name=SINGLE_FN)
+        # download_name now includes the "-<num>" suffix
+        download_name = os.path.basename(path)
+        return send_file(path, as_attachment=True, download_name=download_name)
 
     else:
         flash("Unknown export type.")
