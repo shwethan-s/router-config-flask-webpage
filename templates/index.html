@@ -4,8 +4,6 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Building Config Dashboard</title>
-
-  <!-- 1) Pull in Tailwind via CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
 
@@ -41,16 +39,24 @@
     <section class="bg-white rounded-lg shadow p-6 w-full">
       <h2 class="text-xl font-medium mb-4">Add Controller</h2>
       <form method="POST" action="/add" class="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full">
-        <input type="number" name="building_number" required
-               placeholder="Network #"
-               class="border border-gray-300 rounded px-3 py-2 w-full focus:ring-2 focus:ring-blue-500"/>
-
-        <input type="text" name="ip" required
-               placeholder="IP Address"
-               class="border border-gray-300 rounded px-3 py-2 w-full focus:ring-2 focus:ring-blue-500"/>
-
-        <button type="submit"
-                class="bg-green-500 text-white rounded px-6 py-2 w-full hover:bg-green-600 transition">
+        <input
+          type="number"
+          name="building_number"
+          required
+          placeholder="Network #"
+          class="border border-gray-300 rounded px-3 py-2 w-full focus:ring-2 focus:ring-blue-500"
+        />
+        <input
+          type="text"
+          name="ip"
+          required
+          placeholder="IP Address"
+          class="border border-gray-300 rounded px-3 py-2 w-full focus:ring-2 focus:ring-blue-500"
+        />
+        <button
+          type="submit"
+          class="bg-green-500 text-white rounded px-6 py-2 w-full hover:bg-green-600 transition"
+        >
           Add
         </button>
       </form>
@@ -63,20 +69,42 @@
         <table class="w-full table-auto">
           <thead class="bg-gray-200">
             <tr>
-              <th class="px-4 py-2 text-left">Building #</th>
-              <th class="px-4 py-2 text-left">IP Address</th>
-              <th class="px-4 py-2 text-left">Actions</th>
+              <th class="px-4 py-2 text-left">
+                <!-- no offset needed on Network # -->
+                Network #
+              </th>
+              <th class="px-4 py-2 text-right">
+                <!-- wrap header text in a div you can nudge -->
+                <!-- change left-[30px] to whatever pixel offset you need -->
+                <div class="relative left-[-10px]">
+                  IP Address
+                </div>
+              </th>
+              <th class="px-4 py-2 text-right">
+                <!-- change left-[50px] until it's centered over the buttons -->
+                <div class="relative left-[-65px]">
+                  Actions
+                </div>
+              </th>
             </tr>
           </thead>
           <tbody>
             {% for b in buildings %}
               <tr class="border-b hover:bg-gray-50">
                 <td class="px-4 py-2">{{ b[1] }}</td>
-                <td class="px-4 py-2">{{ b[2] }}</td>
-                <td class="px-4 py-2">
-                  <a href="/remove/{{ b[1] }}"
-                     class="bg-red-500 text-white rounded px-3 py-1 hover:bg-red-600 transition">
+                <td class="px-4 py-2 text-right">{{ b[2] }}</td>
+                <td class="px-4 py-2 flex justify-end space-x-2">
+                  <a
+                    href="/remove/{{ b[1] }}"
+                    class="bg-red-500 text-white rounded px-3 py-1 hover:bg-red-600 transition"
+                  >
                     Remove
+                  </a>
+                  <a
+                    href="/export?type=single&building_number={{ b[1] }}"
+                    class="bg-blue-500 text-white rounded px-3 py-1 hover:bg-blue-600 transition"
+                  >
+                    Download
                   </a>
                 </td>
               </tr>
@@ -96,19 +124,28 @@
     <section class="bg-white rounded-lg shadow p-6 w-full">
       <h2 class="text-xl font-medium mb-4">Download Configs</h2>
       <form action="/export" method="get" class="flex flex-wrap gap-4 items-center">
-        <select name="type" required
-                class="border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-500">
+        <select
+          name="type"
+          required
+          class="border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-500"
+        >
           <option value="master">Master List</option>
           <option value="all">All Configs (ZIP)</option>
           <option value="single">Single Config</option>
         </select>
 
-        <input type="number" name="building_number" min="1"
-               placeholder="Building #"
-               class="border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-500"/>
+        <input
+          type="number"
+          name="building_number"
+          min="1"
+          placeholder="Building #"
+          class="border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-500"
+        />
 
-        <button type="submit"
-                class="bg-blue-500 text-white rounded px-6 py-2 hover:bg-blue-600 transition">
+        <button
+          type="submit"
+          class="bg-blue-500 text-white rounded px-6 py-2 hover:bg-blue-600 transition"
+        >
           Download
         </button>
       </form>

@@ -1,19 +1,37 @@
 # app.py
 # -------------------- Imports & Setup --------------------
+import os
+import sys
+import sqlite3
+import datetime
+import zipfile
+import threading
+import webbrowser
+
 from flask import (
     Flask, render_template, request, redirect,
     url_for, send_file, flash, get_flashed_messages
 )
-import sqlite3, datetime, os, zipfile
 
-# Base directory and file paths
-BASE_DIR      = os.path.dirname(os.path.abspath(__file__))
-DB_PATH       = os.path.join(BASE_DIR, 'buildings.db')
-EXPORT_FOLDER = os.path.join(BASE_DIR, 'export')
-INI_FILE      = 'TSIRouters.ini'
+# ————— Determine base dir (for PyInstaller compatibility) —————
+if getattr(sys, 'frozen', False):
+    BASE_DIR = sys._MEIPASS
+else:
+    BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
-# Create Flask app and set a secret key for flash messages
-app = Flask(__name__)
+DB_PATH       = os.path.join(BASE_DIR,   'buildings.db')
+EXPORT_FOLDER = os.path.join(BASE_DIR,   'export')
+
+# **Strict filenames per spec — no ".ini" extension**
+MASTER_LIST_FN = 'Master List'
+SINGLE_FN      = 'HOSTS'
+ALL_ZIP_FN     = 'all_configs.zip'
+
+# Create Flask app, pointing at the bundled templates
+app = Flask(
+    __name__,
+    template_folder=os.path.join(BASE_DIR, 'templates')
+)
 app.secret_key = 'supersecretchangeme'
 
 
@@ -81,7 +99,8 @@ def get_buildings():
     """)
     rows = c.fetchall()
     conn.close()
-    return rows
+    return rows 
+
 
 def get_last_update():
     """Get the latest action timestamp from logs."""
@@ -92,6 +111,7 @@ def get_last_update():
     conn.close()
     return ts
 
+
 def log_action(num, action):
     """Append an add/remove/reactivate entry to logs."""
     conn = sqlite3.connect(DB_PATH)
@@ -100,8 +120,9 @@ def log_action(num, action):
         "INSERT INTO logs (building_number, action, timestamp) VALUES (?, ?, ?)",
         (num, action, datetime.datetime.now().isoformat())
     )
-    conn.commit()
+    conn.commit() 
     conn.close()
+
 
 def add_building(num, ip):
     """
@@ -149,125 +170,109 @@ def add_building(num, ip):
     finally:
         conn.close()
 
+
 def remove_building(num):
     """Mark a building as removed (soft delete) and log it."""
     if num <= 0:
         flash('Invalid building number.')
         return
-    
-    
+
     conn = sqlite3.connect(DB_PATH)
-    c = conn.cursor() # get a cursor object
-    # Update the status to 'removed' and set last_updated timestamp
+    c = conn.cursor()
     c.execute(
         "UPDATE buildings SET status='removed', last_updated =? WHERE building_number=?",
         (datetime.datetime.now().isoformat(), num)
     )
     conn.commit()
     conn.close()
-    flash(f'Removed building {num}.') # fstring that controls the message
+
+    flash(f'Removed building {num}.')
     log_action(num, 'removed')
 
 
 # -------------------- INI Generation --------------------
-def generate_tsirouters_ini():
+def generate_master_list():
     """
-    Make the master TSIRouters.ini listing every active building.
-    Returns the path to the file.
+    Write Master List (no extension) with all active buildings,
+    using the strict "<IP> TNR_<number>" format.
     """
-    lines = [
-        "[OPTIONS]",
-        "IP_ROUTER_AUTODETECT=FALSE",
-        "",
-        "[ROUTERS]",
-        "Format= Segment Number = IP Address of the Router, Monitor for Alarms"
-    ]
+    lines = []
     for b in get_buildings():
-     
-    
-        lines.append(f"{b[1]}={b[2]},FALSE") 
-       # clear the list after each iteration
+        ip  = b[2]
+        num = b[1]
+        lines.append(f"{ip} TNR_{num}")
 
     os.makedirs(EXPORT_FOLDER, exist_ok=True)
-    path = os.path.join(EXPORT_FOLDER, INI_FILE)
+    path = os.path.join(EXPORT_FOLDER, MASTER_LIST_FN)
     with open(path, 'w') as f:
         f.write("\n".join(lines))
     return path
 
+
 def generate_single_ini(building_number):
     """
-    Generate TSIRouters_<num>.ini for one building,
-    excluding itself from the list. Returns path or None.
+    Write HOSTS (no extension) listing every other active building
+    in the "<IP> TNR_<number>" format.
     """
     buildings = get_buildings()
     nums = [b[1] for b in buildings]
     if building_number not in nums:
         return None
 
-    lines = [
-        "[OPTIONS]",
-        "IP_ROUTER_AUTODETECT=FALSE",
-        "",
-        "[ROUTERS]",
-        "Format= Segment Number = IP Address of the Router, Monitor for Alarms"
-    ]
-    for num, ip in [(b[1], b[2]) for b in buildings if b[1] != building_number]:
-        lines.append(f"{num}={ip},FALSE")
+    lines = []
+    for b in buildings:
+        if b[1] != building_number:
+            lines.append(f"{b[2]} TNR_{b[1]}")
 
     os.makedirs(EXPORT_FOLDER, exist_ok=True)
-    fname = f"TSIRouters_{building_number}.ini"
-    path = os.path.join(EXPORT_FOLDER, fname)
+    path = os.path.join(EXPORT_FOLDER, SINGLE_FN)
     with open(path, 'w') as f:
         f.write("\n".join(lines))
     return path
 
+
 def generate_all_inis():
     """
-    Generate one per-controller INI and bundle into all_configs.zip.
-    Returns the zip path.
+    Generate one HOSTS per building (overwriting the same file each time),
+    then bundle them all into all_configs.zip with names "<num>_HOSTS".
     """
     buildings = get_buildings()
     os.makedirs(EXPORT_FOLDER, exist_ok=True)
 
-    paths = []
+    # regenerate the HOSTS file for each building
     for b in buildings:
-        p = generate_single_ini(b[1])
-        if p:
-            paths.append(p)
+        generate_single_ini(b[1])
 
-    zip_path = os.path.join(EXPORT_FOLDER, 'all_configs.zip')
+    zip_path = os.path.join(EXPORT_FOLDER, ALL_ZIP_FN)
     with zipfile.ZipFile(zip_path, 'w') as z:
-        for p in paths:
-            z.write(p, arcname=os.path.basename(p))
+        for b in buildings:
+            single_path = os.path.join(EXPORT_FOLDER, SINGLE_FN)
+            arcname     = f"{b[1]}_{SINGLE_FN}"
+            z.write(single_path, arcname=arcname)
     return zip_path
 
 
 # -------------------- Flask Routes --------------------
 @app.route('/')
 def index():
-    # 1) Fetch the raw ISO string (or None)
+    """Dashboard home, with formatted last-update timestamp."""
     raw_ts = get_last_update()
-
-    # 2) Try to parse & format; fall back gracefully
     if raw_ts:
         try:
             dt = datetime.datetime.fromisoformat(raw_ts)
-            # e.g. “May 05, 2025 10:15:33”
             last_update = dt.strftime("%b %d, %Y %H:%M:%S")
         except Exception:
-            # if parsing fails, just show the raw value
             last_update = raw_ts
     else:
-        # no timestamp yet
         last_update = '—'
 
-    # 3) Render template with the formatted timestamp
     return render_template(
         'index.html',
-        buildings    = get_buildings(),
-        last_update  = last_update,
-        messages     = get_flashed_messages()
+        buildings   = get_buildings(),
+        last_update = last_update,
+        messages    = get_flashed_messages()
     )
+
 
 @app.route('/add', methods=['POST'])
 def add():
@@ -280,6 +285,7 @@ def add():
         flash('Building number must be an integer.')
     return redirect(url_for('index'))
 
+
 @app.route('/remove/<building_number>')
 def remove(building_number):
     """Handle the Remove link."""
@@ -290,25 +296,23 @@ def remove(building_number):
         flash('Invalid removal request.')
     return redirect(url_for('index'))
 
+
 @app.route('/export', methods=['GET'])
 def export():
     """
-    Download configs based on `?type=`:
-      - master → master TSIRouters.ini
-      - all    → all_configs.zip
-      - single → TSIRouters_<num>.ini (requires building_number=X)
+    ?type=master  → download "Master List" (no extension)
+    ?type=all     → download "all_configs.zip"
+    ?type=single  → download "HOSTS" for building=X
     """
     mode = request.args.get('type', 'master')
 
-
-
     if mode == 'master':
-        path = generate_tsirouters_ini()
-        return send_file(path, as_attachment=True)
+        path = generate_master_list()
+        return send_file(path, as_attachment=True, download_name=MASTER_LIST_FN)
 
     elif mode == 'all':
-        zip_path = generate_all_inis()
-        return send_file(zip_path, as_attachment=True)
+        path = generate_all_inis()
+        return send_file(path, as_attachment=True, download_name=ALL_ZIP_FN)
 
     elif mode == 'single':
         try:
@@ -322,7 +326,7 @@ def export():
             flash(f"Building {num} not found in master list.")
             return redirect(url_for('index'))
 
-        return send_file(path, as_attachment=True)
+        return send_file(path, as_attachment=True, download_name=SINGLE_FN)
 
     else:
         flash("Unknown export type.")
@@ -331,10 +335,7 @@ def export():
 
 # -------------------- Launch App --------------------
 if __name__ == '__main__':
-    import webbrowser, threading
-
     init_db()
-
-    # Start Flask in a thread
+    # auto-open browser, then start Flask
     threading.Timer(1, lambda: webbrowser.open("http://127.0.0.1:5000")).start()
     app.run(host='127.0.0.1', port=5000)
