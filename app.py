@@ -143,7 +143,7 @@ def add_building(num, ip):
             (num, ip, now)
         )
         conn.commit()
-        flash(f'Added building {num} ({ip}).')
+        flash(f'Added Network {num} ({ip})')
         log_action(num, 'added')
 
     except sqlite3.IntegrityError:
@@ -163,10 +163,10 @@ def add_building(num, ip):
                  WHERE building_number = ?
             ''', (ip, now, num))
             conn.commit()
-            flash(f'Re-activated building {num} ({ip}).')
+            flash(f'Re-activated Network {num} ({ip})')
             log_action(num, 'reactivated')
         else:
-            flash(f'Building {num} already exists.')
+            flash(f'Network {num} already exists.')
     finally:
         conn.close()
 
@@ -174,7 +174,7 @@ def add_building(num, ip):
 def remove_building(num):
     """Mark a building as removed (soft delete) and log it."""
     if num <= 0:
-        flash('Invalid building number.')
+        flash('Invalid Network Number')
         return
 
     conn = sqlite3.connect(DB_PATH)
@@ -281,7 +281,7 @@ def add():
         ip  = request.form.get('ip', '').strip()
         add_building(num, ip)
     except ValueError:
-        flash('Building number must be an integer.')
+        flash('Network number must be an integer')
     return redirect(url_for('index'))
 
 
@@ -317,12 +317,12 @@ def export():
         try:
             num = int(request.args.get('building_number', 0))
         except ValueError:
-            flash("Specify a valid building number for single export.")
+            flash("Specify a valid Network number for single export.")
             return redirect(url_for('index'))
 
         path = generate_single_ini(num)
         if not path:
-            flash(f"Building {num} not found in master list.")
+            flash(f"Network {num} not found in master list.")
             return redirect(url_for('index'))
 
         # download_name now includes the "-<num>" suffix
