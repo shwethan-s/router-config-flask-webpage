@@ -130,7 +130,7 @@ def add_building(num, ip):
     flip it back to active (and update the IP+timestamp).
     """
     if num <= 0 or not ip:
-        flash('Invalid building number or IP.')
+        flash('Invalid building number or IP.', 'error')
         return
 
     now = datetime.datetime.now().isoformat()
@@ -143,7 +143,7 @@ def add_building(num, ip):
             (num, ip, now)
         )
         conn.commit()
-        flash(f'Added Network {num} ({ip})')
+        flash(f'Added Network {num} ({ip})', 'success')
         log_action(num, 'added')
 
     except sqlite3.IntegrityError:
@@ -163,10 +163,10 @@ def add_building(num, ip):
                  WHERE building_number = ?
             ''', (ip, now, num))
             conn.commit()
-            flash(f'Re-activated Network {num} ({ip})')
+            flash(f'Re-activated Network {num} ({ip})', 'success')
             log_action(num, 'reactivated')
         else:
-            flash(f'Network {num} already exists.')
+            flash(f'Network {num} already exists.', 'error')
     finally:
         conn.close()
 
@@ -174,7 +174,7 @@ def add_building(num, ip):
 def remove_building(num):
     """Mark a building as removed (soft delete) and log it."""
     if num <= 0:
-        flash('Invalid Network Number')
+        flash('Invalid Network Number', 'error')
         return
 
     conn = sqlite3.connect(DB_PATH)
@@ -186,7 +186,7 @@ def remove_building(num):
     conn.commit()
     conn.close()
 
-    flash(f'Removed Network {num}')
+    flash(f'Removed Network {num}', 'error')
     log_action(num, 'removed')
 
 
@@ -240,7 +240,6 @@ def generate_all_inis():
     buildings = get_buildings()
     os.makedirs(EXPORT_FOLDER, exist_ok=True)
 
-    # regenerate each single file, collect paths
     single_paths = [generate_single_ini(b[1]) for b in buildings]
 
     zip_path = os.path.join(EXPORT_FOLDER, ALL_ZIP_FN)
@@ -269,7 +268,7 @@ def index():
         'index.html',
         buildings   = get_buildings(),
         last_update = last_update,
-        messages    = get_flashed_messages()
+        messages    = get_flashed_messages(with_categories=True)
     )
 
 
@@ -281,7 +280,7 @@ def add():
         ip  = request.form.get('ip', '').strip()
         add_building(num, ip)
     except ValueError:
-        flash('Network number must be an integer')
+        flash('Network number must be an integer', 'error')
     return redirect(url_for('index'))
 
 
@@ -292,7 +291,7 @@ def remove(building_number):
         num = int(building_number)
         remove_building(num)
     except ValueError:
-        flash('Invalid removal request.')
+        flash('Invalid removal request.', 'error')
     return redirect(url_for('index'))
 
 
@@ -317,20 +316,19 @@ def export():
         try:
             num = int(request.args.get('building_number', 0))
         except ValueError:
-            flash("Specify a valid Network number for single export.")
+            flash("Specify a valid Network number for single export", 'error')
             return redirect(url_for('index'))
 
         path = generate_single_ini(num)
         if not path:
-            flash(f"Network {num} not found in master list.")
+            flash(f"Network {num} not found in master list", 'error')
             return redirect(url_for('index'))
 
-        # download_name now includes the "-<num>" suffix
         download_name = os.path.basename(path)
         return send_file(path, as_attachment=True, download_name=download_name)
 
     else:
-        flash("Unknown export type.")
+        flash("Unknown export type", 'error')
         return redirect(url_for('index'))
 
 
