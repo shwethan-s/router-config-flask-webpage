@@ -24,14 +24,7 @@
       {% if messages %}
         <div class="space-y-2">
           {% for category, msg in messages %}
-            <div class="
-                px-4 py-2 rounded
-                {% if category == 'success' %}
-                  bg-green-100 border-green-400 text-green-700
-                {% else %}
-                  bg-red-100 border-red-400 text-red-700
-                {% endif %}
-              ">
+            <div class="px-4 py-2 rounded {% if category == 'success' %}bg-green-100 border-green-400 text-green-700{% else %}bg-red-100 border-red-400 text-red-700{% endif %}">
               {{ msg }}
             </div>
           {% endfor %}
@@ -39,37 +32,29 @@
       {% endif %}
     {% endwith %}
 
-    <!-- LAST UPDATED -->
-    <div class="text-gray-700">
-      <strong>Last updated:</strong> {{ last_update or '—' }}
+    <!-- LAST UPDATED & DOWNLOAD -->
+    <div class="flex justify-between items-center text-gray-700">
+      <div>
+        <strong>Last updated:</strong> {{ last_update or '—' }}
+      </div>
+      <form action="/export" method="get" class="flex items-center space-x-2">
+        <select name="type" required class="border border-gray-300 rounded px-3 py-1 focus:ring-2 focus:ring-blue-500">
+          <option value="master">Master List</option>
+          <option value="all">All Configs (ZIP)</option>
+        </select>
+        <button type="submit" class="bg-blue-500 text-white rounded px-6 py-2 hover:bg-blue-600 transition">
+          Download
+        </button>
+      </form>
     </div>
 
     <!-- ADD CONTROLLER -->
     <section class="bg-white rounded-lg shadow p-6 w-full">
       <h2 class="text-xl font-medium mb-4">Add Controller</h2>
       <form id="addForm" method="POST" action="/add" class="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full">
-        <input
-          type="number"
-          id="addNumber"
-          name="building_number"
-          required
-          placeholder="Network #"
-          class="border border-gray-300 rounded px-3 py-2 w-full focus:ring-2 focus:ring-blue-500"
-        />
-        <input
-          type="text"
-          id="addIp"
-          name="ip"
-          required
-          placeholder="IP Address"
-          class="border border-gray-300 rounded px-3 py-2 w-full focus:ring-2 focus:ring-blue-500"
-        />
-        <button
-          type="submit"
-          class="bg-green-500 text-white rounded px-6 py-2 w-full hover:bg-green-600 transition"
-        >
-          Add
-        </button>
+        <input type="number" id="addNumber" name="building_number" required placeholder="Network #" class="border border-gray-300 rounded px-3 py-2 w-full focus:ring-2 focus:ring-blue-500" />
+        <input type="text" id="addIp" name="ip" required placeholder="IP Address" class="border border-gray-300 rounded px-3 py-2 w-full focus:ring-2 focus:ring-blue-500" />
+        <button type="submit" class="bg-green-500 text-white rounded px-6 py-2 w-full hover:bg-green-600 transition">Add</button>
       </form>
     </section>
 
@@ -104,18 +89,6 @@
         </table>
       </div>
     </section>
-
-    <!-- EXPORT CONFIG SECTION -->
-    <section class="bg-white rounded-lg shadow p-6 w-full">
-      <h2 class="text-xl font-medium mb-4">Download Configs</h2>
-      <form action="/export" method="get" class="flex flex-wrap gap-4 items-center">
-        <select name="type" required class="border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-500">
-          <option value="master">Master List</option>
-          <option value="all">All Configs (ZIP)</option>
-        </select>
-        <button type="submit" class="bg-blue-500 text-white rounded px-6 py-2 hover:bg-blue-600 transition">Download</button>
-      </form>
-    </section>
   </main>
 
   <!-- CONFIRMATION MODAL -->
@@ -140,7 +113,7 @@
       let actionCallback = null;
 
       function showConfirm(action, number, ip, callback) {
-        title.textContent = `${action} Network`; // e.g. "Remove Network" or "Add Network"
+        title.textContent = `${action} Network`;
         message.innerHTML = `Are you sure you want to <span class="font-bold text-${action==='Remove'?'red':'green'}-600">${action.toLowerCase()}</span> Network <span class="font-bold">${number}</span>: <span class="font-bold">${ip}</span>?`;
         btnOk.textContent = action;
         btnOk.className = `px-4 py-2 ${action==='Remove'?'bg-red-600 hover:bg-red-700':'bg-green-600 hover:bg-green-700'} text-white rounded`;

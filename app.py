@@ -272,6 +272,9 @@ def index():
     )
 
 
+                
+        
+
 @app.route('/add', methods=['POST'])
 def add():
     """Handle the Add form."""
@@ -301,6 +304,7 @@ def export():
     ?type=master  → download "Master List" (no extension)
     ?type=all     → download "all_configs.zip"
     ?type=single  → download "HOSTS-<number>"
+
     """
     mode = request.args.get('type', 'master')
     
@@ -315,6 +319,8 @@ def export():
 
     elif mode == 'single':
         try:
+
+
             num = int(request.args.get('building_number', 0))
         except ValueError:
             flash("Specify a valid Network number for single export", 'error')
@@ -330,7 +336,7 @@ def export():
 
     else:
         flash("Unknown export type", 'error')
-        return redirect(url_for('index'))
+        return redirect(url_for('index'))   
 
 
 # -------------------- Launch App --------------------
