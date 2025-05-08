@@ -47,9 +47,10 @@
     <!-- ADD CONTROLLER -->
     <section class="bg-white rounded-lg shadow p-6 w-full">
       <h2 class="text-xl font-medium mb-4">Add Controller</h2>
-      <form method="POST" action="/add" class="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full">
+      <form id="addForm" method="POST" action="/add" class="grid grid-cols-1 sm:grid-cols-3 gap-4 w-full">
         <input
           type="number"
+          id="addNumber"
           name="building_number"
           required
           placeholder="Network #"
@@ -57,6 +58,7 @@
         />
         <input
           type="text"
+          id="addIp"
           name="ip"
           required
           placeholder="IP Address"
@@ -78,23 +80,9 @@
         <table class="w-full table-auto">
           <thead class="bg-gray-200">
             <tr>
-              <th class="px-4 py-2 text-left">
-                <!-- no offset needed on Network # -->
-                Network #
-              </th>
-              <th class="px-4 py-2 text-right">
-                <!-- wrap header text in a div you can nudge -->
-                <!-- change left-[30px] to whatever pixel offset you need -->
-                <div class="relative left-[-10px]">
-                  IP Address
-                </div>
-              </th>
-              <th class="px-4 py-2 text-right">
-                <!-- change left-[50px] until it's centered over the buttons -->
-                <div class="relative left-[-65px]">
-                  Actions 
-                </div>
-              </th>
+              <th class="px-4 py-2 text-left">Network #</th>
+              <th class="px-4 py-2 text-right"><div class="relative left-[-10px]">IP Address</div></th>
+              <th class="px-4 py-2 text-right"><div class="relative left-[-65px]">Actions</div></th>
             </tr>
           </thead>
           <tbody>
@@ -103,25 +91,13 @@
                 <td class="px-4 py-2">{{ b[1] }}</td>
                 <td class="px-4 py-2 text-right">{{ b[2] }}</td>
                 <td class="px-4 py-2 flex justify-end space-x-2">
-                  <a
-                    href="/remove/{{ b[1] }}"
-                    class="bg-red-500 text-white rounded px-3 py-1 hover:bg-red-600 transition"
-                  >
-                    Remove
-                  </a>
-                  <a
-                    href="/export?type=single&building_number={{ b[1] }}"
-                    class="bg-blue-500 text-white rounded px-3 py-1 hover:bg-blue-600 transition"
-                  >
-                    Download
-                  </a>
+                  <a href="/remove/{{ b[1] }}" data-number="{{ b[1] }}" data-ip="{{ b[2] }}" class="remove-link bg-red-500 text-white rounded px-3 py-1 hover:bg-red-600 transition">Remove</a>
+                  <a href="/export?type=single&building_number={{ b[1] }}" class="bg-blue-500 text-white rounded px-3 py-1 hover:bg-blue-600 transition">Download</a>
                 </td>
               </tr>
             {% else %}
               <tr>
-                <td colspan="3" class="text-center py-4 text-gray-500">
-                  No active controllers.
-                </td>
+                <td colspan="3" class="text-center py-4 text-gray-500">No active controllers.</td>
               </tr>
             {% endfor %}
           </tbody>
@@ -133,42 +109,74 @@
     <section class="bg-white rounded-lg shadow p-6 w-full">
       <h2 class="text-xl font-medium mb-4">Download Configs</h2>
       <form action="/export" method="get" class="flex flex-wrap gap-4 items-center">
-        <select
-          name="type"
-          required
-          class="border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-500"
-        >
+        <select name="type" required class="border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-500">
           <option value="master">Master List</option>
           <option value="all">All Configs (ZIP)</option>
-          
         </select>
-
-<!-- code for the single config button portion 
-<input
-  type="number"
-  name="building_number"
-  min="1"
-  placeholder="Building #"
-  class="border border-gray-300 rounded px-3 py-2 focus:ring-2 focus:ring-blue-500"
-/>
--->
-
-
-        <button
-          type="submit"
-          class="bg-blue-500 text-white rounded px-6 py-2 hover:bg-blue-600 transition"
-        >
-          Download
-        </button>
+        <button type="submit" class="bg-blue-500 text-white rounded px-6 py-2 hover:bg-blue-600 transition">Download</button>
       </form>
     </section>
-
   </main>
 
-  <!-- FOOTER -->
-  <footer class="bg-gray-200 text-center py-4 w-full">
-    <p class="text-gray-700">&copy; 2025 McMaster Network Automation Tool</p>
-  </footer>
+  <!-- CONFIRMATION MODAL -->
+  <div id="confirmModal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50 hidden">
+    <div class="bg-white rounded-lg shadow-lg p-6 w-80">
+      <h3 id="confirmTitle" class="text-xl font-bold mb-2">Confirm</h3>
+      <p id="confirmMessage" class="mb-4 text-sm">Are you sure?</p>
+      <div class="flex justify-end space-x-2">
+        <button id="confirmCancel" class="px-4 py-2 bg-gray-300 rounded hover:bg-gray-400">Cancel</button>
+        <button id="confirmOk" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Confirm</button>
+      </div>
+    </div>
+  </div>
 
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const modal = document.getElementById('confirmModal');
+      const title = document.getElementById('confirmTitle');
+      const message = document.getElementById('confirmMessage');
+      const btnOk = document.getElementById('confirmOk');
+      const btnCancel = document.getElementById('confirmCancel');
+      let actionCallback = null;
+
+      function showConfirm(action, number, ip, callback) {
+        title.textContent = `${action} Network`; // e.g. "Remove Network" or "Add Network"
+        message.innerHTML = `Are you sure you want to <span class="font-bold text-${action==='Remove'?'red':'green'}-600">${action.toLowerCase()}</span> Network <span class="font-bold">${number}</span>: <span class="font-bold">${ip}</span>?`;
+        btnOk.textContent = action;
+        btnOk.className = `px-4 py-2 ${action==='Remove'?'bg-red-600 hover:bg-red-700':'bg-green-600 hover:bg-green-700'} text-white rounded`;
+        actionCallback = callback;
+        modal.classList.remove('hidden');
+      }
+
+      btnOk.addEventListener('click', () => {
+        modal.classList.add('hidden');
+        if (actionCallback) actionCallback();
+      });
+
+      btnCancel.addEventListener('click', () => {
+        modal.classList.add('hidden');
+      });
+
+      // Confirmation on add
+      const addForm = document.getElementById('addForm');
+      addForm.addEventListener('submit', e => {
+        e.preventDefault();
+        const num = document.getElementById('addNumber').value;
+        const ip = document.getElementById('addIp').value;
+        showConfirm('Add', num, ip, () => addForm.submit());
+      });
+
+      // Confirmation on remove links
+      document.querySelectorAll('.remove-link').forEach(link => {
+        link.addEventListener('click', e => {
+          e.preventDefault();
+          const number = link.getAttribute('data-number');
+          const ip = link.getAttribute('data-ip');
+          const href = link.getAttribute('href');
+          showConfirm('Remove', number, ip, () => window.location = href);
+        });
+      });
+    });
+  </script>
 </body>
 </html>

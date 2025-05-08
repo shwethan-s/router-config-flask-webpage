@@ -303,6 +303,7 @@ def export():
     ?type=single  → download "HOSTS-<number>"
     """
     mode = request.args.get('type', 'master')
+    
 
     if mode == 'master':
         path = generate_master_list()
