@@ -136,6 +136,18 @@ def add_building(num, ip):
     now = datetime.datetime.now().isoformat()
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
+
+    # Block duplicate IPs
+    c.execute(
+        "SELECT building_number FROM buildings WHERE ip_address=? AND status='active'",
+        (ip,)
+    )
+    existing = c.fetchone()
+    if existing:
+        conn.close()
+        flash(f'IP {ip} already assigned to Network {existing[0]}', 'error')
+        return
+
     try:
         # Try to insert fresh
         c.execute(
@@ -166,7 +178,7 @@ def add_building(num, ip):
             flash(f'Re-activated Network {num} ({ip})', 'success')
             log_action(num, 'reactivated')
         else:
-            flash(f'Network {num} already exists.', 'error')
+            flash(f'Network {num} already exists', 'error')
     finally:
         conn.close()
 
@@ -272,9 +284,6 @@ def index():
     )
 
 
-                
-        
-
 @app.route('/add', methods=['POST'])
 def add():
     """Handle the Add form."""
@@ -307,20 +316,14 @@ def export():
 
     """
     mode = request.args.get('type', 'master')
-    
-
     if mode == 'master':
         path = generate_master_list()
         return send_file(path, as_attachment=True, download_name=MASTER_LIST_FN)
-
     elif mode == 'all':
         path = generate_all_inis()
         return send_file(path, as_attachment=True, download_name=ALL_ZIP_FN)
-
     elif mode == 'single':
         try:
-
-
             num = int(request.args.get('building_number', 0))
         except ValueError:
             flash("Specify a valid Network number for single export", 'error')
@@ -333,10 +336,9 @@ def export():
 
         download_name = os.path.basename(path)
         return send_file(path, as_attachment=True, download_name=download_name)
-
     else:
         flash("Unknown export type", 'error')
-        return redirect(url_for('index'))   
+        return redirect(url_for('index'))
 
 
 # -------------------- Launch App --------------------
