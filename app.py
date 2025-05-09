@@ -7,6 +7,7 @@ import datetime
 import zipfile
 import threading
 import webbrowser
+import re
 
 from flask import (
     Flask, render_template, request, redirect,
@@ -130,7 +131,27 @@ def add_building(num, ip):
     flip it back to active (and update the IP+timestamp).
     """
     if num <= 0 or not ip:
-        flash('Invalid building number or IP.', 'error')
+        flash('Invalid network number or IP', 'error')
+        return
+
+    # Validate IP format: only digits and periods, four octets
+    if not re.match(r'^\d+\.\d+\.\d+\.\d+$', ip):
+        flash('IP must contain only positive numbers and periods', 'error')
+        return
+    parts = ip.split('.')
+
+    # Validate octet ranges
+    for part in parts[:-1]:
+        val = int(part)
+        if val < 0 or val > 255:
+            flash('Each IP octet must be between 0 and 255', 'error')
+            return
+        
+    # Last octet must not be 4, 5, or 255
+    # reserved for other hosts in McMaster 
+    last = int(parts[-1])
+    if last in (4, 5, 255):
+        flash('Last IP octet cannot be 4, 5 or 255', 'error')
         return
 
     now = datetime.datetime.now().isoformat()
@@ -157,6 +178,7 @@ def add_building(num, ip):
         conn.commit()
         flash(f'Added Network {num} ({ip})', 'success')
         log_action(num, 'added')
+      
 
     except sqlite3.IntegrityError:
         # Already exists: check if it was 'removed'
@@ -283,7 +305,6 @@ def index():
         messages    = get_flashed_messages(with_categories=True)
     )
 
-
 @app.route('/add', methods=['POST'])
 def add():
     """Handle the Add form."""
@@ -295,7 +316,6 @@ def add():
         flash('Network number must be an integer', 'error')
     return redirect(url_for('index'))
 
-
 @app.route('/remove/<building_number>')
 def remove(building_number):
     """Handle the Remove link."""
@@ -305,7 +325,6 @@ def remove(building_number):
     except ValueError:
         flash('Invalid removal request.', 'error')
     return redirect(url_for('index'))
-
 
 @app.route('/export', methods=['GET'])
 def export():
@@ -340,10 +359,8 @@ def export():
         flash("Unknown export type", 'error')
         return redirect(url_for('index'))
 
-
 # -------------------- Launch App --------------------
 if __name__ == '__main__':
     init_db()
-    # auto-open browser, then start Flask
     threading.Timer(1, lambda: webbrowser.open("http://127.0.0.1:5000")).start()
     app.run(host='127.0.0.1', port=5000)
