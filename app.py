@@ -97,9 +97,11 @@ def get_buildings():
         SELECT * FROM buildings
          WHERE status='active' AND building_number>0
       ORDER BY building_number
+              
     """)
     rows = c.fetchall()
     conn.close()
+    
     return rows
 
 
@@ -146,7 +148,8 @@ def add_building(num, ip):
         if val < 0 or val > 255:
             flash('Each IP octet must be between 0 and 255', 'error')
             return
-        
+    
+
     # Last octet must not be 4, 5, or 255
     # reserved for other hosts in McMaster 
     last = int(parts[-1])
@@ -154,9 +157,11 @@ def add_building(num, ip):
         flash('Last IP octet cannot be 4, 5 or 255', 'error')
         return
 
+
     now = datetime.datetime.now().isoformat()
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
+   
 
     # Block duplicate IPs
     c.execute(
@@ -178,7 +183,8 @@ def add_building(num, ip):
         conn.commit()
         flash(f'Added Network {num} ({ip})', 'success')
         log_action(num, 'added')
-      
+
+
 
     except sqlite3.IntegrityError:
         # Already exists: check if it was 'removed'
@@ -188,6 +194,13 @@ def add_building(num, ip):
         )
         row = c.fetchone()
         if row and row[0] == 'removed':
+
+            '''
+            this was added to prevent re-adding a building that was removed
+            and then re-added with the same number.
+            if the building was removed, we need to check if the IP is already in use
+            '''
+
             # Reactivate
             c.execute('''
                 UPDATE buildings
@@ -205,6 +218,8 @@ def add_building(num, ip):
         conn.close()
 
 
+
+
 def remove_building(num):
     """Mark a building as removed (soft delete) and log it."""
     if num <= 0:
@@ -217,7 +232,10 @@ def remove_building(num):
         "UPDATE buildings SET status='removed', last_updated =? WHERE building_number=?",
         (datetime.datetime.now().isoformat(), num)
     )
+
+    
     conn.commit()
+
     conn.close()
 
     flash(f'Removed Network {num}', 'error')
@@ -244,6 +262,8 @@ def generate_master_list():
 
 
 def generate_single_ini(building_number):
+
+
     """
     Write HOSTS-<number> (no extension) listing every other active building
     in the "<IP> TNR_<number>" format.
@@ -251,12 +271,14 @@ def generate_single_ini(building_number):
     buildings = get_buildings()
     nums = [b[1] for b in buildings]
     if building_number not in nums:
+        # Building not found in the list
         return None
 
     lines = []
     for b in buildings:
         if b[1] != building_number:
             lines.append(f"{b[2]} TNR_{b[1]}")
+
 
     os.makedirs(EXPORT_FOLDER, exist_ok=True)
     filename = f"{SINGLE_FN_BASE}-{building_number}"
@@ -334,6 +356,8 @@ def export():
     ?type=single  → download "HOSTS-<number>"
 
     """
+
+    
     mode = request.args.get('type', 'master')
     if mode == 'master':
         path = generate_master_list()
@@ -348,6 +372,7 @@ def export():
             flash("Specify a valid Network number for single export", 'error')
             return redirect(url_for('index'))
 
+        
         path = generate_single_ini(num)
         if not path:
             flash(f"Network {num} not found in master list", 'error')
