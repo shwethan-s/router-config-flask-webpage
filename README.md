@@ -17,7 +17,7 @@ This tool streamlines the setup of building network definitions for TSIRouter de
 ## ✨ Features
 
 - 🏗 Add, remove, and restore building numbers with associated IPs
-- ✅ Validates IPs (blocks 255, 4, and 5 in last octet)
+- ✅ Validates IPs 
 - 🧾 Export options:
   - `Master List` (`TNR_` format)
   - `Single INI` (excludes one building)
@@ -25,4 +25,4 @@ This tool streamlines the setup of building network definitions for TSIRouter de
   - Windows XP `ROUTERS` config for TSIRouter
 - 💽 SQLite database auto-seeded on first run
 - 🧠 Action logging with timestamps (`added`, `removed`, `reactivated`)
-- 🌐 Runs as a web app and auto-launches in browser
+- 🌐 Runs as a web app via Flask and auto-launches in browser
