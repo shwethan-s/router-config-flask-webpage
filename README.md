@@ -1,18 +1,28 @@
-🧠 DOS & TISRouter Management App
+# 🏢 Legacy Building Config Generator – TSIRouter & XP Tool
 
-A lightweight full-stack application built with **Flask** and **SQLite**, designed to streamline configuration and deployment of **TISRouter IP setups** and **Data Output Sheets (DOS)**. Perfect for managing IP-based controller networks (e.g., Teletrol) and exporting configuration files for system integration.
+A local Flask-based configuration tool for managing **building controller IP assignments** and generating router configuration files compatible with **TSIRouter systems** used in **legacy Windows XP / DOS environments**.
 
 ---
 
-🚀 Features
+## 🎯 Purpose
 
-- 🏗 Add/remove/restore **building network entries** with IP validation
-- 📥 Export:
-  - ✅ Master IP list (`TNR_x` format)
-  - ✅ Individual INI files for each building
-  - ✅ A full ZIP of all INI configurations
-  - ✅ Windows XP `ROUTERS` config file
-- 📊 Timestamped action logging (`added`, `removed`, `reactivated`)
-- 🧠 Smart duplicate detection and IP conflict resolution
-- 💾 Backed by **SQLite** and autoseeded on first launch
-- 🌐 Auto-opens local web UI via **Flask**
+This tool streamlines the setup of building network definitions for TSIRouter deployments by:
+
+- Auto-generating `.ini` and `ROUTERS` config files
+- Ensuring valid and non-conflicting IP assignments
+- Supporting easy building additions/removals with an interactive UI
+
+---
+
+## ✨ Features
+
+- 🏗 Add, remove, and restore building numbers with associated IPs
+- ✅ Validates IPs (blocks 255, 4, and 5 in last octet)
+- 🧾 Export options:
+  - `Master List` (`TNR_` format)
+  - `Single INI` (excludes one building)
+  - `All INIs` as a `.zip`
+  - Windows XP `ROUTERS` config for TSIRouter
+- 💽 SQLite database auto-seeded on first run
+- 🧠 Action logging with timestamps (`added`, `removed`, `reactivated`)
+- 🌐 Runs as a web app and auto-launches in browser
